@@ -2,52 +2,51 @@
 
 
 
-This script is a pyhton tools to add new Vhost to apache2 in ubuntu/debian instalation 
+Cette outil est un utilitaire pour ajouter de nouveau vhost apache sur des distribution  ubuntu/debian 
 
 
 
 
-### Requirement
+### Prérequis
 
-add_vhost requires somes apaches  to run.
-- apache2-suexec-custom (for fpm mode)
-- ssl (for ssl)
+- apache2-suexec-custom (pour le support de fpm)
+- ssl (pour le support du https)
 
 
-### Create a simple vhost 
+### Creer un simple vhost
 ```sh
 $ python add_vhost.py   --domain_primary [DOMAIN]  --password  [PASSWORD} --user [USER]
 ```
 
-### Create a simple vhost with multi domain
+### Ajouter un vhost avec plusieur alias de domaine
 Using --domain_other option
 ```sh
 $ python add_vhost.py   --domain_primary [DOMAIN]  --domain_other [[DOMAIN_1]  [DOMAIN_2] ...]  --password  [PASSWORD} --user [USER]
 ```
-### add vhost to host file 
+### Ajouter le site au fichier host du serveur 
 Using --nos_dns option
 ```sh
 $ python add_vhost.py   --domain_primary [DOMAIN]  --password  [PASSWORD} --user [USER] --no_dns
 ```
 
-### add vhost with https 
+### Ajouter un vhost avec support du https
 Using 
 - --ssl  option 
-- --cert option (cert files)
-- --key option (key files)
+- --cert option (fichier .cert)
+- --key option (fichier .key)
 ```sh
 $ python add_vhost.py   --domain_primary [DOMAIN]  --password  [PASSWORD} --user [USER] --ssl  --cert [PATH to cert file] --key [PATh to key files]
 ```
-### add vhost with redirection from http to https 
+### Ajouter un vhost avec redirection du http vers https
 Using --force_ssl option
 ```sh
 $ python add_vhost.py   --domain_primary [DOMAIN]  --password  [PASSWORD} --user [USER] --ssl  --cert [PATH to cert file] --key [PATh to key files] --force_ssl
 ```
 
-### add vhost using fpm-php 
+### ajoute un vhost avec php-fpm
 Using 
-- --fpm  option 
-- --fpm_version (version of your php-fpm ) , 7.4 for exemple
+- --fpm  
+- --fpm_version (votre version de  php-fpm ) , 7.4 for exemple
 
 ```sh
 $ python add_vhost.py   --domain_primary [DOMAIN]  --domain_other [[DOMAIN_1]  [DOMAIN_2] ...]  --password  [PASSWORD} --user [USER] --fpm  --fpm_version [VERSION]

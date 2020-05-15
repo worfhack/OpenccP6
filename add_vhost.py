@@ -23,9 +23,9 @@ def find_free_port():
 
 
 #  Default Var ####
-WEB_ROOT = '/var/www/'
-WORK_FOLDER = '/tmp/'
-APACHE_SITES_FOLDER = '/etc/apache2/sites-available/'
+WEB_ROOT = '/var/www/' # Direcoty to home folder
+WORK_FOLDER = '/tmp/' # working directory
+APACHE_SITES_FOLDER = '/etc/apache2/sites-available/' # default apache2 
  
 # This script must be run as root!
 if not os.geteuid()==0:
@@ -59,10 +59,10 @@ fpm_version = getattr(args, 'fpm_version') #   fpm_version
 force_ssl = getattr(args, 'force_ssl') # add a http redirect to http
 password = getattr(args,'password') #password for new login
 user= getattr(args, 'user') # new user
-cert= getattr(args, 'cert') 
-key= getattr(args, 'key') 
+cert= getattr(args, 'cert')  # cert files
+key= getattr(args, 'key')  # key files
 
-dir_name = domain_primary
+dir_name = domain_primary # set documentroot
 
 # check if dir_name exists
 if not path.exists(dir_name):
@@ -73,15 +73,23 @@ if not path.exists(dir_name):
     raise FileNotFoundError('The path does not exist: %s' % dir_name)
 if not path.exists(WORK_FOLDER):
     os.mkdir(WORK_FOLDER)
-vhost_fpm  = ""
+
+
+#test if ssl mode is enbale cert files and key files are required
 if ssl == True and (cert == None or key == None) :
 	raise Exception('Cert files is required')
+
+#Creation of vars to save fpm config 
+vhost_fpm  = ""
+
 if fpm == True:
-	if  fpm_version == None:
+	if  fpm_version == None:  # if fpm , script need to know the version of php
 		raise Exception('Fpm version is required')
-	FPM_FOLDER = '/etc/php/'+fpm_version+'/fpm/pool.d/'
-	PHP_FPM_VERSION = 'php'+fpm_version+'-fpm'
-	port_fpm = find_free_port()
+
+	FPM_FOLDER = '/etc/php/'+fpm_version+'/fpm/pool.d/' # Set fpm directrory
+	PHP_FPM_VERSION = 'php'+fpm_version+'-fpm' # set fpm config files
+	port_fpm = find_free_port() # Find a free port to fpm 
+	#### Creation config for apache files #############
 	vhost_fpm = """
 	 SuexecUserGroup {USER} {USER}
 	    <FilesMatch '\.php$'>
@@ -89,6 +97,8 @@ if fpm == True:
    	</FilesMatch>
 
 	""".strip().replace('{USER}', user).replace('{PORT}', str(port_fpm))
+##############################
+###### Creation config files for fpm ###################
 	fpm_conf = """
 		[{USER}]
 		user = www-data
@@ -100,45 +110,50 @@ if fpm == True:
 		pm.min_spare_servers = 1
 		pm.max_spare_servers = 3
 		""".strip().replace("{PORT}", str(port_fpm)).replace("{USER}", user)
+####################################
+#### save config to new config files ################
 	fpm_conf_src = path.join(WORK_FOLDER, domain_primary + ".conf")
 	fpm_conf_dest = path.join(FPM_FOLDER, path.basename(fpm_conf_src))
 	with open(fpm_conf_src, 'w') as file:
-    		file.write(fpm_conf)
+    		file.write(fpm_conf_src)
 	shutil.copy(fpm_conf_src, fpm_conf_dest)
-	os.system('sudo systemctl restart ' + PHP_FPM_VERSION)
+#######################################################"
+	os.system('sudo systemctl restart ' + PHP_FPM_VERSION) # restart fpm 
 
 
 
 
 #Create user Dir  and user
 os.system("userdell " + user +  " >/dev/null 2>&1") 
-
-try:
-	pwd.getpwnam(user)
-except KeyError:
-	encPass = crypt.crypt(password,"22")
-	os.system("useradd -p "+encPass+ " -s "+ "/bin/bash "+ "-d "+ dir_name + " -m "+ " -c \""+ user+"\" " + user)
+encPass = crypt.crypt(password,"22")
+os.system("useradd -p "+encPass+ " -s "+ "/bin/bash "+ "-d "+ dir_name + " -m "+ " -c \""+ user+"\" " + user)
+#############################
 
 #Add new vhost to host file if option no dns
 if no_dns ==1:
 	file_object = open('/etc/hosts', 'a')
 	file_object.write("127.0.0.1   " + domain_primary + "\n")
-	for i in domain_other: 
-	        file_object.write("127.0.0.1   " + i + "\n")
+	if domain_other != None: ########" add all domain to host files 
+		for i in domain_other: 
+		        file_object.write("127.0.0.1   " + i + "\n")
 	file_object.close()
 
 #Prepare apache config
 
+### Prepare extra lines to apache config to add ServerAlias ############
 if domain_other != None:
 	alias = "ServerAlias "
 	for i in domain_other: 
 		alias = alias +" " +i
 else:
 	alias = "" 
-extra = ""
-if force_ssl == 1:
-	extra = extra + "RewriteEngine On \n RewriteCond %{HTTPS} !=on \n RewriteRule ^(.*) https://"+domain_primary+"/$1 [R,L]"
 
+
+
+extra = ""
+if force_ssl == 1: ## if force ssl creating new lines to apache config for redirect to https
+	extra = extra + "RewriteEngine On \n RewriteCond %{HTTPS} !=on \n RewriteRule ^(.*) https://"+domain_primary+"/$1 [R,L]"
+############
 #CREATE DEMO FILE
 
 index_file = """
@@ -148,11 +163,12 @@ echo "<pre>";
 var_dump($_SERVER);
 echo "</pre>";
 """
-print dir_name
 index_file_dst = path.join(dir_name,  "index.php")
 
+# save files to document root 
 with open(index_file_dst, 'w') as file:
 	file.write(index_file)
+
 
 
 ################# Config for http ##################################"
@@ -178,6 +194,8 @@ vhost_str = """
 """.strip().replace('{DOMAIN}', domain_primary).replace('{DIR}', dir_name).replace('{EXTRA}', extra).replace("{ALIAS}", alias).replace('{FPM}', str(vhost_fpm))
 
 
+
+# save config to apache config dir ###
 vhost_conf_src = path.join(WORK_FOLDER, domain_primary + ".conf")
 vhost_conf_dest = path.join(APACHE_SITES_FOLDER, path.basename(vhost_conf_src))
 
@@ -191,6 +209,7 @@ shutil.copy(vhost_conf_src, vhost_conf_dest)
 ############ Config for ssl mode ###############
 if ssl :
 	extra_secure = "";
+	# Create config for ssl mode 
 	vhost_str_secure = """
 	<VirtualHost *:443>
 	    ServerName {DOMAIN_PRIMARY}
@@ -211,6 +230,9 @@ if ssl :
    	{EXTRA}	
 	</VirtualHost>
 	""".strip().replace('{DOMAIN_PRIMARY}', domain_primary).replace('{DIR}', dir_name).replace('{EXTRA}', extra_secure).replace("{ALIAS}", alias).replace('{FPM}', vhost_fpm).replace('{CERT}', cert).replace('{KEY}', key)
+
+
+	#Save https config to apache config dir#######################
 	vhost_conf_secure_src = path.join(WORK_FOLDER, domain_primary + "_secure.conf")
 	vhost_conf_secure_src = path.join(WORK_FOLDER, domain_primary + "_secure.conf")
 	with open(vhost_conf_secure_src, 'w') as file:
@@ -219,14 +241,16 @@ if ssl :
 	if path.exists(vhost_conf_secure_dest):
 		os.system('sudo rm %s' % vhost_conf_secure_dest)
 	shutil.copy(vhost_conf_secure_src, vhost_conf_secure_dest)
+############################"
 	
 ######################################################################
 
 # activate the site
 os.system('sudo a2ensite %s >/dev/null 2>&1 ' % path.basename(vhost_conf_dest) )
 
-if ssl == 1:
+if ssl == 1:	# activate ssl site
 	 os.system('sudo a2ensite %s >/dev/null 2>&1' % path.basename(vhost_conf_secure_dest))
 
+#Reload apache 
 os.system('sudo systemctl restart apache2')
 print "Your new site is enable"
