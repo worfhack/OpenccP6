@@ -29,7 +29,6 @@ APACHE_SITES_FOLDER = '/etc/apache2/sites-available/'
 
 #Init ClI ARG
 parser = argparse.ArgumentParser()
-parser.add_argument('--login', help="login ")
 parser.add_argument('--domain_primary', help="Domaine principal du site ")
 parser.add_argument('--domain_other', required=False, help="Domaine secondaire du site ",  nargs='+')
 parser.add_argument('--fpm', required=False, help="Php avec fpm", action="store_true")
@@ -69,7 +68,7 @@ if not path.exists(dir_name):
     raise FileNotFoundError('The path does not exist: %s' % dir_name)
 if not path.exists(WORK_FOLDER):
     os.mkdir(WORK_FOLDER)
-
+vhost_fpm  = ""
 if ssl == True and (cert == None or key == None) :
 	raise Exception('Cert files is required')
 if fpm == True:
@@ -125,9 +124,12 @@ if no_dns ==1:
 
 #Prepare apache config
 
-alias = "ServerAlias "
-for i in domain_other: 
-	alias = alias +" " +i
+if domain_other != None:
+	alias = "ServerAlias "
+	for i in domain_other: 
+		alias = alias +" " +i
+else:
+	alias = "" 
 extra = ""
 if force_ssl == 1:
 	extra = extra + "RewriteEngine On \n RewriteCond %{HTTPS} !=on \n RewriteRule ^(.*) https://"+domain_primary+"/$1 [R,L]"
@@ -221,5 +223,5 @@ os.system('sudo a2ensite %s >/dev/null 2>&1 ' % path.basename(vhost_conf_dest) )
 if ssl == 1:
 	 os.system('sudo a2ensite %s >/dev/null 2>&1' % path.basename(vhost_conf_secure_dest))
 
-os.system('sudo systemctl reload apache2')
+os.system('sudo systemctl restart apache2')
 print "Your new site is enable"
