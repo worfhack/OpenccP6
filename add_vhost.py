@@ -6,8 +6,10 @@ import argparse
 import os.path as path
 import os
 import pwd
+import sys
 import shutil
 import crypt
+
 
 
 
@@ -24,12 +26,15 @@ def find_free_port():
 WEB_ROOT = '/var/www/'
 WORK_FOLDER = '/tmp/'
 APACHE_SITES_FOLDER = '/etc/apache2/sites-available/'
-
+ 
+# This script must be run as root!
+if not os.geteuid()==0:
+    sys.exit('This script must be run as root!')
 
 
 #Init ClI ARG
 parser = argparse.ArgumentParser()
-parser.add_argument('--domain_primary', help="Domaine principal du site ")
+parser.add_argument('--domain_primary', help="Domaine principal du site ", required=True)
 parser.add_argument('--domain_other', required=False, help="Domaine secondaire du site ",  nargs='+')
 parser.add_argument('--fpm', required=False, help="Php avec fpm", action="store_true")
 parser.add_argument('--fpm_version', required=False, help="Version de fpm")
