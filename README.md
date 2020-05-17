@@ -11,7 +11,7 @@ Cette outil est un utilitaire pour ajouter de nouveau vhost apache sur des distr
 
 - apache2-suexec-custom (pour le support de fpm)
 - ssl (pour le support du https)
-
+- Install /apt.gpg  for install auther php version
 
 ### Creer un simple vhost
 ```sh
@@ -45,10 +45,9 @@ $ python add_vhost.py   --domain_primary [DOMAIN]  --password  [PASSWORD} --user
 
 ### ajoute un vhost avec php-fpm
 Using 
-- --fpm  
-- --fpm_version (votre version de  php-fpm ) , 7.4 for exemple
+- --fpm (votre version de  php-fpm ) , 7.4 for exemple
 
 ```sh
-$ python add_vhost.py   --domain_primary [DOMAIN]  --domain_other [[DOMAIN_1]  [DOMAIN_2] ...]  --password  [PASSWORD} --user [USER] --fpm  --fpm_version [VERSION]
+$ python add_vhost.py   --domain_primary [DOMAIN]  --domain_other [[DOMAIN_1]  [DOMAIN_2] ...]  --password  [PASSWORD} --user [USER] --fpm [VERSION]
 ```
 

@@ -32,19 +32,20 @@ if not os.geteuid()==0:
     sys.exit('This script must be run as root!')
 
 
+
 #Init ClI ARG
 parser = argparse.ArgumentParser()
 parser.add_argument('--domain_primary', help="Domaine principal du site ", required=True)
 parser.add_argument('--domain_other', required=False, help="Domaine secondaire du site ",  nargs='+')
-parser.add_argument('--fpm', required=False, help="Php avec fpm", action="store_true")
-parser.add_argument('--fpm_version', required=False, help="Version de fpm")
+#parser.add_argument('--fpm', required=False, help="Php avec fpm", action="store_true")
+parser.add_argument('--fpm', required=False, help="Version de fpm")
 parser.add_argument('--no_dns', required=False, help="Ajout l'entrée au fichier host", action="store_true")
 parser.add_argument('--ssl', required=False, help="Active le https sur le site", action="store_true")
 parser.add_argument('--cert', required=False, help="SSL cert certificat file")
 parser.add_argument('--key', required=False, help="SSL key certificat file")
 parser.add_argument('--force_ssl', required=False, help="Active une redirection vers le  https", action="store_true")
-parser.add_argument('--password',    help='mot de passe.')
-parser.add_argument('--user',   help='utilisateur.')
+parser.add_argument('--password',    help='mot de passe.' , required=True)
+parser.add_argument('--login',   help='utilisateur.' , required=True)
 args = parser.parse_args()
 #####
 
@@ -55,10 +56,9 @@ domain_other = getattr(args, 'domain_other') # list a secondary domain , for ali
 no_dns = getattr(args, 'no_dns')   # Add Domain to local host file
 ssl = getattr(args, 'ssl') #   Create a https version
 fpm = getattr(args, 'fpm') #   Add php-fpm to projet
-fpm_version = getattr(args, 'fpm_version') #   fpm_version
 force_ssl = getattr(args, 'force_ssl') # add a http redirect to http
 password = getattr(args,'password') #password for new login
-user= getattr(args, 'user') # new user
+user= getattr(args, 'login') # new user
 cert= getattr(args, 'cert')  # cert files
 key= getattr(args, 'key')  # key files
 
@@ -70,24 +70,32 @@ if not path.exists(dir_name):
 if not path.exists(dir_name):
 	os.mkdir(dir_name)
 if not path.exists(dir_name):
-    raise FileNotFoundError('The path does not exist: %s' % dir_name)
+    sys.exit('The path does not exist: %s' % dir_name)
 if not path.exists(WORK_FOLDER):
     os.mkdir(WORK_FOLDER)
-
-
 #test if ssl mode is enbale cert files and key files are required
 if ssl == True and (cert == None or key == None) :
-	raise Exception('Cert files is required')
+	sys.exit('Cert files is required')
+
 
 #Creation of vars to save fpm config 
 vhost_fpm  = ""
 
-if fpm == True:
-	if  fpm_version == None:  # if fpm , script need to know the version of php
-		raise Exception('Fpm version is required')
+if fpm != None:
+	
 
-	FPM_FOLDER = '/etc/php/'+fpm_version+'/fpm/pool.d/' # Set fpm directrory
-	PHP_FPM_VERSION = 'php'+fpm_version+'-fpm' # set fpm config files
+	FPM_FOLDER = '/etc/php/'+fpm+'/fpm/pool.d/' # Set fpm directrory
+	PHP_FPM_VERSION = 'php'+fpm+'-fpm' # set fpm config files
+
+
+	os.system(" a2enmod suexec  >/dev/null 2>&1")
+	os.system(" a2enmod proxy_fcgi  >/dev/null 2>&1")
+	if not path.exists(FPM_FOLDER): #test if fpm version is install
+		os.system("apt-get -yq install "+PHP_FPM_VERSION+"   >/dev/null 2>&1")
+		if not path.exists(FPM_FOLDER):
+			sys.exit('Invalid php-fpm version')
+		os.system('rm -rf  /etc/php/'+fpm+'/fpm/pool.d/www.conf') # prevent conflig with default site
+	###########
 	port_fpm = find_free_port() # Find a free port to fpm 
 	#### Creation config for apache files #############
 	vhost_fpm = """
@@ -115,7 +123,7 @@ if fpm == True:
 	fpm_conf_src = path.join(WORK_FOLDER, domain_primary + ".conf")
 	fpm_conf_dest = path.join(FPM_FOLDER, path.basename(fpm_conf_src))
 	with open(fpm_conf_src, 'w') as file:
-    		file.write(fpm_conf_src)
+    		file.write(fpm_conf)
 	shutil.copy(fpm_conf_src, fpm_conf_dest)
 #######################################################"
 	os.system('sudo systemctl restart ' + PHP_FPM_VERSION) # restart fpm 
@@ -124,7 +132,8 @@ if fpm == True:
 
 
 #Create user Dir  and user
-os.system("userdell " + user +  " >/dev/null 2>&1") 
+os.system("userdel " + user +  " >/dev/null 2>&1") 
+os.system("rm -rf  " + dir_name+  " >/dev/null 2>&1") 
 encPass = crypt.crypt(password,"22")
 os.system("useradd -p "+encPass+ " -s "+ "/bin/bash "+ "-d "+ dir_name + " -m "+ " -c \""+ user+"\" " + user)
 #############################
@@ -249,8 +258,10 @@ if ssl :
 os.system('sudo a2ensite %s >/dev/null 2>&1 ' % path.basename(vhost_conf_dest) )
 
 if ssl == 1:	# activate ssl site
+	 os.system(" a2enmod ssl  >/dev/null 2>&1")
 	 os.system('sudo a2ensite %s >/dev/null 2>&1' % path.basename(vhost_conf_secure_dest))
 
 #Reload apache 
 os.system('sudo systemctl restart apache2')
 print "Your new site is enable"
+
