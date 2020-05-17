@@ -160,8 +160,9 @@ else:
 
 
 extra = ""
-if force_ssl == 1: ## if force ssl creating new lines to apache config for redirect to https
-	extra = extra + "RewriteEngine On \n RewriteCond %{HTTPS} !=on \n RewriteRule ^(.*) https://"+domain_primary+"/$1 [R,L]"
+if force_ssl == 1: ## if force ssl creating new lines to apache config for redirect to https 
+	os.system(" a2enmod rewrite  >/dev/null 2>&1")
+	extra = extra + "RewriteEngine On \n RewriteCond %{HTTPS} !=on \n RewriteRule ^(.*) https://"+domain_primary+"$1 [R,L]"
 ############
 #CREATE DEMO FILE
 
